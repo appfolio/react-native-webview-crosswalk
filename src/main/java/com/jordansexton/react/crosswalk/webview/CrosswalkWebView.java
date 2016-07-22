@@ -11,6 +11,7 @@ import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.events.EventDispatcher;
 import org.xwalk.core.XWalkNavigationHistory;
 import org.xwalk.core.XWalkResourceClient;
+import org.xwalk.core.XWalkUIClient;
 import org.xwalk.core.XWalkView;
 import javax.annotation.Nullable;
 
@@ -22,6 +23,8 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
 
     private final ResourceClient resourceClient;
 
+    private final UIClient uiClient;
+
     private @Nullable String injectedJavaScript;
 
     private boolean isJavaScriptInjected;
@@ -32,8 +35,10 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
         activity = _activity;
         eventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
         resourceClient = new ResourceClient(this);
+        uiClient = new UIClient(this);
 
         this.setResourceClient(resourceClient);
+        this.setUIClient(uiClient);
     }
 
     public Boolean getLocalhost () {
@@ -80,6 +85,49 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
         }
     }
 
+    protected class UIClient extends XWalkUIClient {
+
+        UIClient (XWalkView view) {
+            super(view);
+        }
+
+        @Override
+        public void onPageLoadStarted (XWalkView view, String url) {
+            ((CrosswalkWebView) view).callInjectedJavaScript();
+            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
+            eventDispatcher.dispatchEvent(
+                    new NavigationStateChangeEvent(
+                            getId(),
+                            SystemClock.uptimeMillis(),
+                            view.getTitle(),
+                            true,
+                            url,
+                            navigationHistory.canGoBack(),
+                            navigationHistory.canGoForward()
+                    )
+            );
+
+        }
+
+        @Override
+        public void onPageLoadStopped (XWalkView view, String url, XWalkUIClient.LoadStatus status) {
+            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
+            eventDispatcher.dispatchEvent(
+                    new NavigationStateChangeEvent(
+                            getId(),
+                            SystemClock.uptimeMillis(),
+                            view.getTitle(),
+                            false,
+                            url,
+                            navigationHistory.canGoBack(),
+                            navigationHistory.canGoForward()
+                    )
+            );
+        }
+    }
+
+    
+
     protected class ResourceClient extends XWalkResourceClient {
 
         private Boolean localhost = false;
@@ -96,40 +144,39 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
             localhost = _localhost;
         }
 
-        @Override
-        public void onLoadFinished (XWalkView view, String url) {
-            ((CrosswalkWebView) view).callInjectedJavaScript();
-
-            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
-            eventDispatcher.dispatchEvent(
-                new NavigationStateChangeEvent(
-                    getId(),
-                    SystemClock.uptimeMillis(),
-                    view.getTitle(),
-                    false,
-                    url,
-                    navigationHistory.canGoBack(),
-                    navigationHistory.canGoForward()
-                )
-            );
-
-        }
-
-        @Override
-        public void onLoadStarted (XWalkView view, String url) {
-            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
-            eventDispatcher.dispatchEvent(
-                new NavigationStateChangeEvent(
-                    getId(),
-                    SystemClock.uptimeMillis(),
-                    view.getTitle(),
-                    true,
-                    url,
-                    navigationHistory.canGoBack(),
-                    navigationHistory.canGoForward()
-                )
-            );
-        }
+//        @Override
+//        public void onLoadFinished (XWalkView view, String url) {
+//            ((CrosswalkWebView) view).callInjectedJavaScript();
+//            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
+//            eventDispatcher.dispatchEvent(
+//                new NavigationStateChangeEvent(
+//                    getId(),
+//                    SystemClock.uptimeMillis(),
+//                    view.getTitle(),
+//                    false,
+//                    url,
+//                    navigationHistory.canGoBack(),
+//                    navigationHistory.canGoForward()
+//                )
+//            );
+//
+//        }
+//
+//        @Override
+//        public void onLoadStarted (XWalkView view, String url) {
+//            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
+//            eventDispatcher.dispatchEvent(
+//                new NavigationStateChangeEvent(
+//                    getId(),
+//                    SystemClock.uptimeMillis(),
+//                    view.getTitle(),
+//                    true,
+//                    url,
+//                    navigationHistory.canGoBack(),
+//                    navigationHistory.canGoForward()
+//                )
+//            );
+//        }
 
         @Override
         public boolean shouldOverrideUrlLoading (XWalkView view, String url) {
