@@ -75,7 +75,7 @@ public class CrosswalkWebViewGroupManager extends ViewGroupManager<CrosswalkWebV
                   _activity.runOnUiThread(new Runnable() {
                       @Override
                       public void run () {
-                          view.load(null, html);
+                          view.loadData(html, "text/html", null);
                       }
                   });
                   return;
@@ -85,7 +85,7 @@ public class CrosswalkWebViewGroupManager extends ViewGroupManager<CrosswalkWebV
                   _activity.runOnUiThread(new Runnable() {
                       @Override
                       public void run () {
-                          view.load(url, null);
+                          view.loadUrl(url);
                       }
                   });
                   return;
@@ -113,7 +113,7 @@ public class CrosswalkWebViewGroupManager extends ViewGroupManager<CrosswalkWebV
             _activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run () {
-                    view.load(url, null);
+                    view.loadUrl(url);
                 }
             });
         }
