@@ -163,42 +163,6 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
         }
 
         @Override
-        public void onLoadFinished (XWalkView view, String url) {
-            ((CrosswalkWebView) view).linkBridge();
-            ((CrosswalkWebView) view).callInjectedJavaScript();
-
-            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
-            eventDispatcher.dispatchEvent(
-                new NavigationStateChangeEvent(
-                    getId(),
-                    SystemClock.uptimeMillis(),
-                    view.getTitle(),
-                    false,
-                    url,
-                    navigationHistory.canGoBack(),
-                    navigationHistory.canGoForward()
-                )
-            );
-
-        }
-
-        @Override
-        public void onLoadStarted (XWalkView view, String url) {
-            XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
-            eventDispatcher.dispatchEvent(
-                new NavigationStateChangeEvent(
-                    getId(),
-                    SystemClock.uptimeMillis(),
-                    view.getTitle(),
-                    true,
-                    url,
-                    navigationHistory.canGoBack(),
-                    navigationHistory.canGoForward()
-                )
-            );
-        }
-
-        @Override
         public void onReceivedLoadError (XWalkView view, int errorCode, String description, String failingUrl) {
             eventDispatcher.dispatchEvent(
                 new ErrorEvent(
@@ -226,7 +190,7 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
         public boolean shouldOverrideUrlLoading (XWalkView view, String url) {
             Uri uri = Uri.parse(url);
             if (uri.getScheme().equals(CrosswalkWebViewManager.JSNavigationScheme)) {
-                onLoadFinished(view, url);
+                dispatchNavigationEvent(view, url, false);
                 return true;
             }
             else if (getLocalhost()) {
@@ -259,9 +223,41 @@ class CrosswalkWebView extends XWalkView implements LifecycleEventListener {
         }
 
         @Override
+        public void onPageLoadStopped (XWalkView view, String url, LoadStatus status) {
+            ((CrosswalkWebView) view).linkBridge();
+            ((CrosswalkWebView) view).callInjectedJavaScript();
+
+            dispatchNavigationEvent(view, url, false);
+        }
+
+        @Override
+        public void onPageLoadStarted(XWalkView view, String url) {
+            Uri uri = Uri.parse(url);
+            if (!uri.getScheme().equals(CrosswalkWebViewManager.JSNavigationScheme)) {
+                dispatchNavigationEvent(view, url, true);
+            }
+        }
+
+        @Override
         public void openFileChooser (XWalkView view, ValueCallback<Uri> uploadFile, String acceptType, String capture) {
             isChoosingFile = true;
             super.openFileChooser(view, uploadFile, acceptType, capture);
         }
+    }
+
+    private void dispatchNavigationEvent(XWalkView view, String url, boolean isLoading) {
+        XWalkNavigationHistory navigationHistory = view.getNavigationHistory();
+
+        eventDispatcher.dispatchEvent(
+            new NavigationStateChangeEvent(
+                getId(),
+                SystemClock.uptimeMillis(),
+                view.getTitle(),
+                isLoading,
+                url,
+                navigationHistory.canGoBack(),
+                navigationHistory.canGoForward()
+            )
+        );
     }
 }
